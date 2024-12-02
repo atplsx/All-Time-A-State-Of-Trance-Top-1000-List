@@ -52,3 +52,73 @@ async function downloadAllTopTracks() {
 
 // Sayfa yüklendikten sonra çalıştır
 downloadAllTopTracks();
+
+
+
+
+// Sayfadaki top10track bilgilerini çekmek için fonksiyon
+async function downloadAllTopTracks() {
+    let trackData = 'Top Tracks:\n\n'; // Başlık ekle
+    trackData += 'Rank | Artist | Track | Points | Days | Link\n';
+    trackData += '-----------------------------------------------------------\n';
+
+    // Toplam sayfa sayısını belirleyin
+    const totalPages = 20; // Toplam sayfa sayısını manuel olarak girin
+    const baseUrl = "https://www.beatstats.com/tracks/home/list?genre=7&period=19&page=";
+
+    for (let page = 1; page <= totalPages; page++) {
+        // Sayfa URL'sini oluştur
+        const url = `${baseUrl}${page}`;
+
+        try {
+            // Sayfayı fetch ile al
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.error(`Sayfa ${page} alınamadı! Durum: ${response.status}`);
+                continue;
+            }
+
+            const text = await response.text();
+
+            // Sayfa içeriğini DOM'a yükle
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+
+            // 'top10artistchart-full' sınıfındaki tüm öğeleri seç
+            const trackElements = doc.querySelectorAll('#top10artistchart-full');
+
+            // Her bir öğe üzerinde dönerek verileri topla
+            trackElements.forEach(track => {
+                const rank = track.querySelector('#top10artistchart-number')?.textContent.trim() || 'N/A';
+                const artist = track.querySelector('#top10trackchart-artistname')?.textContent.trim() || 'N/A';
+                const trackTitle = track.querySelector('#top10trackchart-title')?.textContent.trim() || 'N/A';
+                const points = track.querySelector('#top10trackchart-points')?.textContent.trim().match(/\d+/g)?.[0] || 'N/A';
+                const days = track.querySelector('#top10trackchart-points')?.textContent.trim().match(/\d+/g)?.[1] || 'N/A';
+                const trackLink = track.querySelector('a[href^="https://www.beatport.com/track"]')?.href || 'N/A';
+
+                // Sanatçı adını uygun şekilde küçük-büyük harfe göre düzenle
+                const formattedArtist = artist.split(',').map(name => name.trim().toLowerCase().replace(/\b\w/g, char => char.toUpperCase())).join(', ');
+
+                // Verileri uygun formatta ekle
+                trackData += `${rank} | ${formattedArtist} | ${trackTitle} | ${points} | ${days} | ${trackLink}\n`;
+            });
+
+            console.log(`Sayfa ${page} başarıyla alındı.`);
+        } catch (error) {
+            console.error(`Sayfa ${page} alınırken hata oluştu:`, error);
+        }
+    }
+
+    // Veriyi indirme işlemi
+    const blob = new Blob([trackData], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'top_tracks_period19.txt';
+    link.click();
+
+    console.log("Tüm veriler başarıyla indirildi!");
+}
+
+// Fonksiyonu çalıştır
+downloadAllTopTracks();
+
